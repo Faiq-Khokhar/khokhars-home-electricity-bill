@@ -42,7 +42,7 @@ export default function App() {
       formData.append("RU", formValues.RU);
       formData.append("CapCode", formValues.CapCode);
 
-      const response = await fetch("/api/lesco-proxy", {
+      const response = await fetch("/api/lesco/Bill.aspx", {
         method: "POST",
         headers: {
           Accept:
