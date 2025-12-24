@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 
+const API_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ||
+  "";
+
 const DEFAULT_FORM = {
   BatchNo: "16",
   SubDiv: "11264",
@@ -42,15 +46,18 @@ export default function App() {
       formData.append("RU", formValues.RU);
       formData.append("CapCode", formValues.CapCode);
 
-      const response = await fetch("/api/lesco/Bill.aspx", {
-        method: "POST",
-        headers: {
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${API_BASE}/api/lesco-proxy?path=Bill.aspx`,
+        {
+          method: "POST",
+          headers: {
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

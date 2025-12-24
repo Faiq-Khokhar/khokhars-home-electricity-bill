@@ -26,22 +26,41 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Extract the path after /api/lesco/
-    const urlPath = req.url.split('/api/lesco/')[1] || 'Bill.aspx';
+    // Figure out the upstream path. Support both:
+    // - Rewrites that preserve the path (/api/lesco/Bill.aspx -> /api/lesco-proxy)
+    // - Direct calls (/api/lesco-proxy?path=Bill.aspx)
+    let urlPath = 'Bill.aspx';
+    try {
+      const parsedUrl = new URL(
+        req.url || '',
+        `http://${req.headers.host || 'localhost'}`
+      );
+      const queryPath = parsedUrl.searchParams.get('path');
+      const rewritePath =
+        req.url && req.url.includes('/api/lesco/')
+          ? req.url.split('/api/lesco/')[1]
+          : null;
+
+      urlPath = (queryPath || rewritePath || 'Bill.aspx').replace(/^\//, '');
+    } catch (e) {
+      console.error('Failed to parse request URL, falling back:', e);
+    }
     const targetUrl = `https://www.lesco.gov.pk:36260/${urlPath}`;
     
-    console.log('Proxying to:', targetUrl);
-    console.log('Request body:', req.body);
-
     // Convert body to URLSearchParams format
-    let bodyString;
-    if (typeof req.body === 'string') {
-      bodyString = req.body;
-    } else {
-      bodyString = new URLSearchParams(req.body).toString();
+    let bodyString = '';
+    try {
+      if (typeof req.body === 'string') {
+        bodyString = req.body;
+      } else if (req.body && typeof req.body === 'object') {
+        bodyString = new URLSearchParams(req.body).toString();
+      } else {
+        bodyString = '';
+      }
+    } catch (e) {
+      console.error('Failed to parse request body, sending empty body:', e);
+      bodyString = '';
     }
-
-    console.log('Body string:', bodyString);
 
     // Use node-fetch with custom agent
     const fetch = (await import('node-fetch')).default;
@@ -67,16 +86,12 @@ export default async function handler(req, res) {
       timeout: 30000, // 30 second timeout
     });
 
-    console.log('Response status:', response.status);
-
     if (!response.ok) {
       throw new Error(`LESCO server returned status: ${response.status}`);
     }
 
     const html = await response.text();
     
-    console.log('Response length:', html.length);
-
     // Return the HTML response
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
