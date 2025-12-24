@@ -45,7 +45,8 @@ export default async function handler(req, res) {
     } catch (e) {
       console.error('Failed to parse request URL, falling back:', e);
     }
-    const targetUrl = `https://www.lesco.gov.pk:36260/${urlPath}`;
+    const upstreamPort = process.env.LESCO_PORT || '36269'; // default to 36269, override via env
+    const targetUrl = `https://www.lesco.gov.pk:${upstreamPort}/${urlPath}`;
     
     // Convert body to URLSearchParams format
     let bodyString = '';
